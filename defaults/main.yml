@@ -1,0 +1,14 @@
+---
+# defaults file for ansible-patrol-prometheus-exporter
+
+patrol_user: "patrol"
+patrol_group: "root"
+
+patrol_directory: "/opt/bmc/Patrol3"
+patrol_psl_directory: "{{ patrol_directory }}/lib/psl"
+patrol_knowledge_directory: "{{ patrol_directory }}/lib/knowledge"
+
+
+
+
+

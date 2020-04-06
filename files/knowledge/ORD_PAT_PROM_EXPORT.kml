@@ -1,0 +1,10 @@
+!PATROLV3.0.5   C6B9AABB0058948D
+!++
+!
+! PATROL Session Knowledge Module
+!
+!--
+KM_LIST = {
+            "ORD_PAT_PROM_EXPORT.km"
+          }
+!

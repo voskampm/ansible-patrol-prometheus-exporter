@@ -1,0 +1,3 @@
+# This file was automaticaly created by the script that generates the installation
+# package for this km. Do not edit!
+print( "1.0.00.16, (Mon Mar 30 17:00:30 2020)");

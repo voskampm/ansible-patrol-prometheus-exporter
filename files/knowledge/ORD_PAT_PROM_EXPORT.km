@@ -1,0 +1,521 @@
+!PATROLV3.5.90i FB0A195D60626300
+!#MSG_DOMAIN	km_sec
+!++
+!
+! PATROL Session Knowledge Module
+!
+!--
+!release 1.0.00
+!revision 16
+!package ord_pat_prom_export
+!description Ordina Patrol Prometheus exporter KM
+!productcode ord_pat_prom_export
+
+
+VERSION 1.22
+
+APPLICATIONS = { 
+  { NAME = "ORD_PAT_PROM_EXPORT",
+	ACTIVE = True,
+	SECURITY = False,
+	PROPAGATE_STATE = True,
+	CREATE_ICON = False,
+	SUSPEND_GLOBAL_PARAMS = False,
+	DISCOVERY_TIME = 0,
+	DISCOVERY = PSL,
+	PRE_DISCOVERY_TEXT =  1582814851 "#################\
+function main() {\
+\
+  local DEBUG;\
+  local RequiredLibaries;\
+  local KmName;\
+  local kmVersion;                                    # The value of this parameter should be replaced by packaging tools\
+  local kmDate;                                       # The value of this parameter should be replaced by packaging tools\
+  local PatrolConfigErrors;\
+  local PceVar;\
+  local Library, warn, alarm, MyMessage;\
+\
+  # Checking if All required libraries are present\
+  DEBUG = get( \"DEBUG\" );\
+  \
+  KmName    = \"ORD_PAT_PROM_EXPORT\";\
+\
+  # Replace '.._official_release_versi..' with the version number of the KM. The preferred method is to set the correct version during the packaging process. \
+  kmVersion = \"1.0.00.16\"; \
+\
+  # Replace '.._official_release_da..' with the date the KM's release date. The preferred method is to set the correct date during the packaging process.\
+  kmDate    = \"Mon Mar 30 17:00:31 2020\";\
+\
+  RequiredLibaries   = [ \"vts_ialib.lib\", \"vts_stdlib.lib\", \"vts_collconfig.lib\", \"vts_debug.lib\", \"ez_remote_functions.lib\"];\
+  PatrolConfigErrors = \"\";\
+  PceVar             = \"ORD_PAT_PROM_EXPORT/__PatrolConfigErrors\";  # Hardcoded because we cannot use a function in a library\
+  \
+  foreach Library ( RequiredLibaries ) {\
+    warn      = \"\";\
+    alarm     = \"\";\
+    MyMessage = \"\";\
+    PslExecute(\"LIBTEST\",\"requires \\\"\".Library.\"\\\";\",warn,alarm);\
+    if (warn || alarm) {\
+      MyMessage          = \"Fatal error: Library '\".Library.\"' not found! Please install this required library and restart the agent \\n\";\
+      PatrolConfigErrors = PatrolConfigErrors.MyMessage.\"\\n\";\
+    }\
+    else {\
+      if ( DEBUG ) {\
+        print( \"DEBUG - \".KmName.\" KM - pre-discovery - \". Library.\" found!\\n\");\
+      }\
+    } \
+  }\
+  \
+  if ( DEBUG ) {\
+    print( \"DEBUG - ORD_POSTGRES_CONTAINER pre-discovery - activating KM\\n\");\
+  } \
+\
+  # Some libraries may be missing but we activate the KM anyhow. PatrolConfigErrors will make sure that an alarm is triggerd\
+  # about the missing libraries. This is the most reliable method when all KM's are pre-loaded. If a KM does not\
+  # work in such an environment an alarm should be triggered.\
+  set ( \"kmDate\", kmDate);\
+  set ( \"kmVersion\", kmVersion);\
+  set ( \"active\", 2);\
+  if ( PatrolConfigErrors ) {\
+    set( PceVar,  PatrolConfigErrors);\
+  }\
+}",
+	DISCOVERY_TEXT =  1582814851 "##########################\
+#                                                        #   \
+#    Discovery Code                           #\
+#                                                        #\
+##########################\
+\
+\
+##########################################\
+function ord_pat_prom_export_discovery() {\
+\
+ local DEBUG;\
+ local DebugName;\
+ local kmVersion;\
+\
+ DEBUG     = get( \"DEBUG\" );\
+ DebugName = \"Function main() in ORD_POSTGRES_Discovery()\";\
+\
+ if ( DEBUG ) {\
+   print( \"DEBUG - \", DebugName, \" - discovery - Entering Discovery.\\n\"); \
+ }\
+\
+ if( ! exists ( \"/ORD_PAT_PROM_EXPORT/ORD_PAT_PROM_EXPORT\" ) ) {\
+  if ( DEBUG ) {\
+    print( \"DEBUG - \", DebugName, \" - discovery - creating ORD_PAT_PROM_EXPORT/ORD_PAT_PROM_EXPORT \\n\"); \
+  }\
+  kmVersion = get( \"/ORD_PAT_PROM_EXPORT/kmVersion\" );\
+  if ( index(kmVersion, \"release_version\" ) || kmVersion == \"\" ) {\
+    kmVersion = \"\";\
+  }\
+  else {\
+    kmVersion = \" (\".kmVersion.\")\";\
+  }\
+  \
+  create( \"/ORD_PAT_PROM_EXPORT/ORD_PAT_PROM_EXPORT\", \"Ordina Patrol exporter for Prometheus\".kmVersion, OK);\
+ }\
+ else {\
+  if ( DEBUG ) {\
+    print( \"DEBUG - \", DebugName, \" - discovery - ORD_PAT_PROM_EXPORT/ORD_PAT_PROM_EXPORT exists. Nothing to do.\\n\"); \
+  }\
+ }\
+\
+\
+}\
+\
+\
+#################\
+function main() {\
+\
+  ord_pat_prom_export_discovery();\
+\
+}",
+	OK_PICTURE = "world_ok.bmp",
+	WRONG_PICTURE = "world_ok.bmp",
+	COMMANDS = {
+		{ NAME = "Toggle Debug", AVAILABILITY = AVAILABLE_ALWAYS, SECURITY = SECURITY_INHERIT,
+				BASE_COMMAND = { 
+				{ COMPUTER_TYPE = "ALL_COMPUTERS", COMMAND_TYPE = "PSL",
+				  COMMAND_TEXT =  1582646548 "requires \"vts_debug.lib\";\
+\
+function main() {\
+  VTS_ToggleDebug();\
+}"}
+				}
+		},
+		{ NAME = "Configure collectors", AVAILABILITY = AVAILABLE_ALWAYS, SECURITY = SECURITY_INHERIT,
+				BASE_COMMAND = { 
+				{ COMPUTER_TYPE = "ALL_COMPUTERS", COMMAND_TYPE = "PSL",
+				  COMMAND_TEXT =  1585566994 "requires \"ord_pat_prom_export.lib\";\
+\
+\
+################################\
+function ConfigureCollectors() {\
+\
+ local DEBUG, DebugName;\
+ local Response;\
+ local only_params_with_threshold;\
+ local upload_thresholds_once, upload_pollinginterval_once, TextCollectorDirectory;\
+ local Appl, Instance;\
+ local ButtonPressed;\
+ local PCMName;         # WinTextCollectorDirectory or UnixTextCollectorDirectory depending on the OS.\
+\
+\
+ DEBUG     = get( \"DEBUG\" );\
+ DebugName = \"ConfigureCollectors()\";\
+\
+ # exit when the user does not have write access for pconfig\
+ PRM_CheckPconfigAccess(TRUE);\
+\
+ Appl      = get( \"appType\" );\
+ Instance  = get( \"sid\" );\
+\
+ only_params_with_threshold = PRM_IA_GetParamValue( Instance, \"only_params_with_threshold\", Appl );\
+ upload_thresholds_once = PRM_IA_GetParamValue( Instance, \"upload_thresholds_once\", Appl );\
+ upload_pollinginterval_once = PRM_IA_GetParamValue( Instance, \"upload_pollinginterval_once\", Appl );\
+\
+\
+ # We use WinTextCollectorDirectory or UnixTextCollectorDirectory to make it easier to distribute settings to all patrol agents \
+ # without having to know which agents are running on Windows and which agents are running on Unix/Linux\
+ if ( grep(\"Windows\", get(\"/osName\"), \"i\") ) {\
+   PCMName = \"WinTextCollectorDirectory\";\
+ }\
+ else {\
+   PCMName = \"UnixTextCollectorDirectory\";\
+ }\
+ TextCollectorDirectory = PRM_IA_GetParamValue(Instance, PCMName, Appl);  \
+ if ( DEBUG ) {\
+   print( \"DEBUG - \",  DebugName, \" - Pconfig - TextCollectorDirectory: [\",TextCollectorDirectory, \"]\\n\");\
+ }\
+  \
+ if (TextCollectorDirectory == \"\") {\
+   OutputDirectory = PRM_IA_GetParamValue(Instance, \"OutputDirectory\", Appl);\
+  \
+   if (DEBUG) {\
+     print( \"DEBUG - \",  DebugName, \" - Appl          = [\".Appl.\"]\\n\");\
+     print( \"DEBUG - \",  DebugName, \" - Instancen     = [\".Instance.\"]\\n\");\
+     print( \"DEBUG - \",  DebugName, \" - OutputDirectory as defined in pconfig looks like: [\", OutputDirectory , \"]\\n\");\
+   }\
+\
+   if (OutputDirectory == \"\") {\
+     # We have to choose the directory where we are going to store threshold reports\
+     if ( grep(\"Windows\", get(\"/osName\"), \"i\") ) {\
+       # On Window /patrolHome points to C:\\PROGRA~1\\BMCSOF~1\\Patrol3\\\
+       if (DEBUG) {\
+         print( \"DEBUG - \",  DebugName, \" - We are running on Windows\\n\");\
+       }\
+       OutputDirectory = get(\"/patrolHome\"); \
+       OutputDirectory = replace(OutputDirectory, \"\\\\\", \"/\" );\
+       OutputDirectory = PRM_StripTrailingCharacter(OutputDirectory, \"/\");\
+     }\
+     else {\
+       OutputDirectory = \"/opt/bmc/Patrol3\";\
+     }\
+     OutputDirectory = OutputDirectory.\"/prometheus\";\
+\
+     if (DEBUG) {\
+       print( \"DEBUG - \",  DebugName, \" - New value for OutputDirectory looks like: \", OutputDirectory , \"\\n\");\
+     }\
+   }\
+\
+   TextCollectorDirectory = OutputDirectory;\
+ }\
+\
+ if ( DEBUG ) {\
+   print( \"DEBUG - \",  DebugName, \" - Pre- Appl: [\",Appl, \"]\\n\");\
+   print( \"DEBUG - \",  DebugName, \" - Pre- Instance: [\",Instance, \"]\\n\");\
+   print( \"DEBUG - \",  DebugName, \" - Pre- only_params_with_threshold: [\",only_params_with_threshold, \"]\\n\");\
+   print( \"DEBUG - \",  DebugName, \" - Pre- upload_thresholds_once: [\",upload_thresholds_once, \"]\\n\");\
+   print( \"DEBUG - \",  DebugName, \" - Pre- upload_pollinginterval_once: [\",upload_pollinginterval_once, \"]\\n\");\
+   print( \"DEBUG - \",  DebugName, \" - Pre- TextCollectorDirectory: [\",TextCollectorDirectory, \"]\\n\");\
+ }\
+ \
+ ButtonPressed = 1;\
+ while ( ButtonPressed == 1 ) {\
+   Response = response(\
+      \"Configure ORD_PAT_PROM_EXPORT collectors\",-1,[\"h=100\",\"w=100\",\"b=Patrol\",\"e=1\",\"H=1202 VTS_URL.HLP\", \"o=Accept\",\"c=Cancel \",\"N=0\",\"A=0\",\"B=0\",\"D=0\"],\
+      [R_COLUMN, 4],\
+         [R_FRAME, 2],\
+            [R_LABEL_CENTER, \"Configure ORD_PAT_PROM_EXPORT collectors\"],\
+         [R_FRAME, 4],\
+            [R_TOGGLE, \"Only collect metrics/status from active parameters\", only_params_with_threshold ],\
+            [R_TOGGLE, \"Upload thresholds once to the Patrol Notification server\", upload_thresholds_once ],\
+            [R_TOGGLE, \"Upload pollinginterval once to the Patrol Notification server\", upload_pollinginterval_once ],\
+            [R_TEXT_FIELD_LABEL, \"Text collector directory\", TextCollectorDirectory ],\
+         [R_SEP_VERT],\
+         [R_FRAME, 1],\
+                [R_LABEL, \"Help: * Uploading to the Patrol Notification server is a risk. Too many connections\\n\".\
+                          \"        or too much data are real dangers. Limit the number of agents that upload data\\n\".\
+                          \"        at the same time and make sure you remove the uploaded data from the Patrol\\n\".\
+                          \"        notification severs as soon as possible.\\n\".\
+                          \"      * Text collector directory is the directory where the Node-exporter or the WMI-\\n\".\
+                          \"        exporter expects to find files with metrics for Prometheus.\" ]\
+   );\
+\
+   if ( DEBUG ) {\
+     print( \"DEBUG - \",  DebugName, \" - Response = \", Response, \"\\n\");\
+   }\
+   ButtonPressed = nthlinef( Response, 1, \"\");\
+   if ( ButtonPressed == 0 ) {\
+     if ( DEBUG ) {\
+       print( \"DEBUG - \",  DebugName, \" - Exit on user request\\n\");\
+     }\
+     exit;\
+   }   \
+\
+   only_params_with_threshold    = nthlinef( Response, 2, \"\");\
+   upload_thresholds_once = nthlinef( Response, 3, \"\");\
+   upload_pollinginterval_once = nthlinef( Response, 4, \"\");\
+   TextCollectorDirectory = nthlinef( Response, 5, \"\");\
+\
+   if ( DEBUG ) {\
+     print( \"DEBUG - \",  DebugName, \" - only_params_with_threshold    =---\", only_params_with_threshold, \"---\\n\");\
+     print( \"DEBUG - \",  DebugName, \" - upload_thresholds_once =---\", only_params_with_threshold, \"---\\n\");\
+     print( \"DEBUG - \",  DebugName, \" - upload_pollinginterval_once =---\", upload_pollinginterval_once, \"---\\n\");\
+     print( \"DEBUG - \",  DebugName, \" - TextCollectorDirectory: [\",TextCollectorDirectory, \"]\\n\");\
+   }\
+\
+\
+   if ( PRM_IA_SetParamValue( Instance, \"only_params_with_threshold\", only_params_with_threshold,  Appl ) == FALSE ) {\
+     PRM_IA_WarnUser(\"ERROR\", \"Could not save only_params_with_threshold setting. Please contact your Patrol administrator\" );\
+     exit;\
+   }\
+   if ( PRM_IA_SetParamValue( Instance, \"upload_thresholds_once\", upload_thresholds_once, Appl ) == FALSE ){\
+     PRM_IA_WarnUser(\"ERROR\", \"Could not save upload_thresholds_once setting. Please contact your Patrol administrator\" );\
+     exit;\
+   }\
+   if ( PRM_IA_SetParamValue( Instance, \"upload_pollinginterval_once\", upload_pollinginterval_once, Appl ) == FALSE ){\
+     PRM_IA_WarnUser(\"ERROR\", \"Could not save upload_pollinginterval_once setting. Please contact your Patrol administrator\" );\
+     exit;\
+   }\
+\
+   if ( PRM_IA_SetParamValue( Instance, PCMName, TextCollectorDirectory, Appl ) == FALSE ){\
+     PRM_IA_WarnUser(\"ERROR\", \"Could not save \".PCMName.\" setting. Please contact your Patrol administrator\" );\
+     exit;\
+   }\
+\
+\
+   ButtonPressed = 0;\
+ }\
+}\
+\
+\
+#################\
+function main() {\
+\
+  ConfigureCollectors();\
+\
+}"}
+				}
+		}
+
+	},
+	PARAMETERS = {
+		{	NAME = "DataDirectory", PARAM_TYPE = CONSUMER, ACTIVE = True, MONITOR = True, CHECK = False,
+				BASE_COMMAND = { 
+				{ COMPUTER_TYPE = "ALL_COMPUTERS", COMMAND_TYPE = "OS",
+				  COMMAND_TEXT =  1582722546 "exit;"}
+				},
+			TITLE = "Directory where data is stored for Prometheus",
+			HISTORY_TIME = "600", HISTORY_SPAN = 0, HISTORY_LEVEL = False,
+			FORMAT = "%s", OUTPUT = OUTPUT_TEXT,
+			AUTO_RESCALE = True, Y_AXIS_MIN = 0, Y_AXIS_MAX = 100,
+			RANGES = {
+			  { NAME = "BORDER", ACTIVE = False, MINIMUM = 0, MAXIMUM = 100, STATE = OK, ALARM_WHEN = ALARM_INSTANT, ALARM_WHEN_N = 0
+			  },
+			  { NAME = "ALARM1", ACTIVE = False, MINIMUM = 0, MAXIMUM = 100, STATE = OK, ALARM_WHEN = ALARM_INSTANT, ALARM_WHEN_N = 0
+			  },
+			  { NAME = "ALARM2", ACTIVE = False, MINIMUM = 100, MAXIMUM = 100, STATE = OK, ALARM_WHEN = ALARM_INSTANT, ALARM_WHEN_N = 0
+			  }
+			}
+		},
+		{	NAME = "TimerPatrolPollingIntervalExp", PARAM_TYPE = CONSUMER, ACTIVE = True, MONITOR = True, CHECK = False,
+				BASE_COMMAND = { 
+				{ COMPUTER_TYPE = "ALL_COMPUTERS", COMMAND_TYPE = "OS",
+				  COMMAND_TEXT =  1582721603 "exit;"}
+				},
+			TITLE = "Time needed to collect PatrolPollingIntervalExporter data", UNITS = "Seconds",
+			HISTORY_TIME = "600", HISTORY_SPAN = 0, HISTORY_LEVEL = False,
+			FORMAT = "%f", OUTPUT = OUTPUT_GRAPH,
+			AUTO_RESCALE = True, Y_AXIS_MIN = 0, Y_AXIS_MAX = 100,
+			RANGES = {
+			  { NAME = "BORDER", ACTIVE = False, MINIMUM = 0, MAXIMUM = 100, STATE = OK, ALARM_WHEN = ALARM_INSTANT, ALARM_WHEN_N = 0
+			  },
+			  { NAME = "ALARM1", ACTIVE = False, MINIMUM = 0, MAXIMUM = 100, STATE = OK, ALARM_WHEN = ALARM_INSTANT, ALARM_WHEN_N = 0
+			  },
+			  { NAME = "ALARM2", ACTIVE = False, MINIMUM = 100, MAXIMUM = 100, STATE = OK, ALARM_WHEN = ALARM_INSTANT, ALARM_WHEN_N = 0
+			  }
+			}
+		},
+		{	NAME = "TimerPatrolStatusExporter", PARAM_TYPE = CONSUMER, ACTIVE = True, MONITOR = True, CHECK = False,
+				BASE_COMMAND = { 
+				{ COMPUTER_TYPE = "ALL_COMPUTERS", COMMAND_TYPE = "OS",
+				  COMMAND_TEXT =  1582721458 "exit;"}
+				},
+			TITLE = "Time needed to collect PatrolStatusExporter data", UNITS = "Seconds",
+			HISTORY_TIME = "600", HISTORY_SPAN = 0, HISTORY_LEVEL = False,
+			FORMAT = "%f", OUTPUT = OUTPUT_GRAPH,
+			AUTO_RESCALE = True, Y_AXIS_MIN = 0, Y_AXIS_MAX = 100,
+			RANGES = {
+			  { NAME = "BORDER", ACTIVE = False, MINIMUM = 0, MAXIMUM = 100, STATE = OK, ALARM_WHEN = ALARM_INSTANT, ALARM_WHEN_N = 0
+			  },
+			  { NAME = "ALARM1", ACTIVE = False, MINIMUM = 0, MAXIMUM = 100, STATE = OK, ALARM_WHEN = ALARM_INSTANT, ALARM_WHEN_N = 0
+			  },
+			  { NAME = "ALARM2", ACTIVE = False, MINIMUM = 100, MAXIMUM = 100, STATE = OK, ALARM_WHEN = ALARM_INSTANT, ALARM_WHEN_N = 0
+			  }
+			}
+		},
+		{	NAME = "TimerPatrolMetricExporter", PARAM_TYPE = CONSUMER, ACTIVE = True, MONITOR = True, CHECK = False,
+				BASE_COMMAND = { 
+				{ COMPUTER_TYPE = "ALL_COMPUTERS", COMMAND_TYPE = "OS",
+				  COMMAND_TEXT =  1582721368 "exit;"}
+				},
+			TITLE = "Time needed to collect PatrolMetricExporter data", UNITS = "Seconds",
+			HISTORY_TIME = "600", HISTORY_SPAN = 0, HISTORY_LEVEL = False,
+			FORMAT = "%f", OUTPUT = OUTPUT_GRAPH,
+			AUTO_RESCALE = True, Y_AXIS_MIN = 0, Y_AXIS_MAX = 100,
+			RANGES = {
+			  { NAME = "BORDER", ACTIVE = False, MINIMUM = 0, MAXIMUM = 100, STATE = OK, ALARM_WHEN = ALARM_INSTANT, ALARM_WHEN_N = 0
+			  },
+			  { NAME = "ALARM1", ACTIVE = False, MINIMUM = 0, MAXIMUM = 100, STATE = OK, ALARM_WHEN = ALARM_INSTANT, ALARM_WHEN_N = 0
+			  },
+			  { NAME = "ALARM2", ACTIVE = False, MINIMUM = 100, MAXIMUM = 100, STATE = OK, ALARM_WHEN = ALARM_INSTANT, ALARM_WHEN_N = 0
+			  }
+			}
+		},
+		{	NAME = "TimerPatrolThresholdExporter", PARAM_TYPE = CONSUMER, ACTIVE = True, MONITOR = True, CHECK = False,
+				BASE_COMMAND = { 
+				{ COMPUTER_TYPE = "ALL_COMPUTERS", COMMAND_TYPE = "OS",
+				  COMMAND_TEXT =  1582721366 "exit;"}
+				},
+			TITLE = "Time needed to collect PatrolThresholdExporter data", UNITS = "Seconds",
+			HISTORY_TIME = "600", HISTORY_SPAN = 0, HISTORY_LEVEL = False,
+			FORMAT = "%f", OUTPUT = OUTPUT_GRAPH,
+			AUTO_RESCALE = True, Y_AXIS_MIN = 0, Y_AXIS_MAX = 100,
+			RANGES = {
+			  { NAME = "BORDER", ACTIVE = False, MINIMUM = 0, MAXIMUM = 100, STATE = OK, ALARM_WHEN = ALARM_INSTANT, ALARM_WHEN_N = 0
+			  },
+			  { NAME = "ALARM1", ACTIVE = False, MINIMUM = 0, MAXIMUM = 100, STATE = OK, ALARM_WHEN = ALARM_INSTANT, ALARM_WHEN_N = 0
+			  },
+			  { NAME = "ALARM2", ACTIVE = False, MINIMUM = 100, MAXIMUM = 100, STATE = OK, ALARM_WHEN = ALARM_INSTANT, ALARM_WHEN_N = 0
+			  }
+			}
+		},
+		{	NAME = "PatrolPollingIntervalExporter", PARAM_TYPE = STANDARD, ACTIVE = True, MONITOR = True, CHECK = False,
+				BASE_COMMAND = { 
+				{ COMPUTER_TYPE = "ALL_COMPUTERS", COMMAND_TYPE = "PSL",
+				  COMMAND_TEXT =  1582715752 "requires \"ord_pat_prom_export.lib\";\
+\
+\
+#################\
+function main() {\
+\
+  PatrolExporterCollector(\"pollinginterval\");\
+\
+}"}
+				},
+			START = "ASAP",
+			POLL_TIME = "43200", EXTERNAL_POLLING = False,
+			TITLE = "Status of the process that collects polling interval data", UNITS = "0 = Ok, 1 = Error",
+			HISTORY_TIME = "43200", HISTORY_SPAN = 0, HISTORY_LEVEL = False,
+			FORMAT = "%f", OUTPUT = OUTPUT_STOPLIGHT,
+			AUTO_RESCALE = True, Y_AXIS_MIN = 0, Y_AXIS_MAX = 2,
+			RANGES = {
+			  { NAME = "BORDER", ACTIVE = False, MINIMUM = 0, MAXIMUM = 2, STATE = OK, ALARM_WHEN = ALARM_INSTANT, ALARM_WHEN_N = 0
+			  },
+			  { NAME = "ALARM1", ACTIVE = True, MINIMUM = 1, MAXIMUM = 2, STATE = ALARM, ALARM_WHEN = ALARM_AFTER_N, ALARM_WHEN_N = 2
+			  },
+			  { NAME = "ALARM2", ACTIVE = False, MINIMUM = 2, MAXIMUM = 2, STATE = OK, ALARM_WHEN = ALARM_INSTANT, ALARM_WHEN_N = 0
+			  }
+			}
+		},
+		{	NAME = "PatrolStatusExporter", PARAM_TYPE = STANDARD, ACTIVE = True, MONITOR = True, CHECK = False,
+				BASE_COMMAND = { 
+				{ COMPUTER_TYPE = "ALL_COMPUTERS", COMMAND_TYPE = "PSL",
+				  COMMAND_TEXT =  1582715733 "requires \"ord_pat_prom_export.lib\";\
+\
+\
+#################\
+function main() {\
+\
+  PatrolExporterCollector(\"status\");\
+\
+}"}
+				},
+			START = "ASAP",
+			POLL_TIME = "60", EXTERNAL_POLLING = False,
+			TITLE = "Status of the process that collects parameter status data", UNITS = "0 = Ok, 1 = Error",
+			HISTORY_TIME = "60", HISTORY_SPAN = 0, HISTORY_LEVEL = False,
+			FORMAT = "%f", OUTPUT = OUTPUT_STOPLIGHT,
+			AUTO_RESCALE = False, Y_AXIS_MIN = 0, Y_AXIS_MAX = 2,
+			RANGES = {
+			  { NAME = "BORDER", ACTIVE = False, MINIMUM = 0, MAXIMUM = 2, STATE = OK, ALARM_WHEN = ALARM_INSTANT, ALARM_WHEN_N = 0
+			  },
+			  { NAME = "ALARM1", ACTIVE = True, MINIMUM = 1, MAXIMUM = 2, STATE = ALARM, ALARM_WHEN = ALARM_AFTER_N, ALARM_WHEN_N = 2
+			  },
+			  { NAME = "ALARM2", ACTIVE = False, MINIMUM = 2, MAXIMUM = 2, STATE = OK, ALARM_WHEN = ALARM_INSTANT, ALARM_WHEN_N = 0
+			  }
+			}
+		},
+		{	NAME = "PatrolMetricExporter", PARAM_TYPE = STANDARD, ACTIVE = True, MONITOR = True, CHECK = False,
+				BASE_COMMAND = { 
+				{ COMPUTER_TYPE = "ALL_COMPUTERS", COMMAND_TYPE = "PSL",
+				  COMMAND_TEXT =  1582715725 "requires \"ord_pat_prom_export.lib\";\
+\
+\
+#################\
+function main() {\
+\
+  PatrolExporterCollector(\"metrics\");\
+\
+}"}
+				},
+			START = "ASAP",
+			POLL_TIME = "60", EXTERNAL_POLLING = False,
+			TITLE = "Status of the process that collects metrics", UNITS = "0 = Ok, 1 = Error",
+			HISTORY_TIME = "60", HISTORY_SPAN = 0, HISTORY_LEVEL = False,
+			FORMAT = "%f", OUTPUT = OUTPUT_STOPLIGHT,
+			AUTO_RESCALE = False, Y_AXIS_MIN = 0, Y_AXIS_MAX = 2,
+			RANGES = {
+			  { NAME = "BORDER", ACTIVE = False, MINIMUM = 0, MAXIMUM = 2, STATE = OK, ALARM_WHEN = ALARM_INSTANT, ALARM_WHEN_N = 0
+			  },
+			  { NAME = "ALARM1", ACTIVE = True, MINIMUM = 1, MAXIMUM = 2, STATE = ALARM, ALARM_WHEN = ALARM_AFTER_N, ALARM_WHEN_N = 2
+			  },
+			  { NAME = "ALARM2", ACTIVE = False, MINIMUM = 2, MAXIMUM = 2, STATE = OK, ALARM_WHEN = ALARM_INSTANT, ALARM_WHEN_N = 0
+			  }
+			}
+		},
+		{	NAME = "PatrolThresholdExporter", PARAM_TYPE = STANDARD, ACTIVE = True, MONITOR = True, CHECK = False,
+				BASE_COMMAND = { 
+				{ COMPUTER_TYPE = "ALL_COMPUTERS", COMMAND_TYPE = "PSL",
+				  COMMAND_TEXT =  1582715708 "requires \"ord_pat_prom_export.lib\";\
+\
+\
+#################\
+function main() {\
+\
+  PatrolExporterCollector(\"thresholds\");\
+\
+}"}
+				},
+			START = "ASAP",
+			POLL_TIME = "43200", EXTERNAL_POLLING = False,
+			TITLE = "Status of the process that collects threshold data", UNITS = "0 = Ok, 1 = Error",
+			HISTORY_TIME = "43200", HISTORY_SPAN = 0, HISTORY_LEVEL = False,
+			FORMAT = "%f", OUTPUT = OUTPUT_STOPLIGHT,
+			AUTO_RESCALE = False, Y_AXIS_MIN = 0, Y_AXIS_MAX = 2,
+			RANGES = {
+			  { NAME = "BORDER", ACTIVE = False, MINIMUM = 0, MAXIMUM = 2, STATE = OK, ALARM_WHEN = ALARM_INSTANT, ALARM_WHEN_N = 0
+			  },
+			  { NAME = "ALARM1", ACTIVE = True, MINIMUM = 1, MAXIMUM = 2, STATE = ALARM, ALARM_WHEN = ALARM_AFTER_N, ALARM_WHEN_N = 2
+			  },
+			  { NAME = "ALARM2", ACTIVE = False, MINIMUM = 2, MAXIMUM = 2, STATE = OK, ALARM_WHEN = ALARM_INSTANT, ALARM_WHEN_N = 0
+			  }
+			}
+		}
+
+	}
+  }
+}
+!13791
